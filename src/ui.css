@@ -34,7 +34,12 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
 .settings-panel { position: absolute; right: 0; top: 39px; z-index: 3; width: min(280px, calc(100vw - 24px)); max-height: calc(100dvh - 60px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; box-shadow: var(--shadow); }
 .settings-panel label { display: block; margin: 14px 0 6px; font-size: 12px; color: var(--muted); }
 .settings-panel label:first-child { margin-top: 0; }
+.settings-panel .fast-mode { display: flex; align-items: center; gap: 8px; }
+.fast-mode input { margin: 0; accent-color: var(--accent); }
 .settings-panel select { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px; background: var(--surface); color: var(--text); font-size: 13px; }
+.account-login { margin-top: 8px; }
+.connection-row { display: flex; gap: 6px; }
+.connection-row input { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 6px; padding: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
 .usage-link { display: block; margin-top: 18px; color: var(--accent); font-size: 12px; text-decoration: none; line-height: 1.7; }
 .account-menu { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
 .account-status { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
@@ -45,7 +50,7 @@ main { min-height: 0; display: flex; flex-direction: column; gap: 10px; padding:
 .language-field { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .source-controls { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .source-controls > .language-field { flex: 1; }
-.language-field select { border: 0; color: var(--text); background: var(--surface); padding: 7px 5px; font-size: 14px; font-weight: 600; max-width: 100%; border-radius: 5px; }
+.language-field select { border: 0; color: var(--text); background: var(--surface); padding: 7px 5px; font-size: 14px; font-weight: 600; width: 200px; min-width: 0; max-width: 100%; border-radius: 5px; }
 .target-field { padding-left: 4px; }
 .swap { color: var(--accent); }
 .swap[aria-disabled=true] { opacity: .4; cursor: not-allowed; }
@@ -65,6 +70,8 @@ main { min-height: 0; display: flex; flex-direction: column; gap: 10px; padding:
 .result { min-height: 0; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 18px; line-height: 1.8; padding: 10px 0; }
 .result-empty { min-height: 0; overflow: auto; padding: 10px 0; color: var(--muted); font-size: 16px; opacity: .65; }
 .pane-bottom { display: flex; align-items: center; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.result-status { flex-wrap: wrap; gap: 4px 8px; }
+.status-action { border: 0; padding: 0; background: transparent; color: var(--accent); text-decoration: underline; }
 .outdated { color: var(--warning); background: color-mix(in srgb, var(--warning) 9%, transparent); border-radius: 4px; padding: 3px 6px; font-size: 10px; }
 #status { min-width: 0; max-height: 3em; overflow: auto; color: var(--muted); line-height: 1.5; margin: 0; }
 #status[data-error=true] { color: var(--warning); }

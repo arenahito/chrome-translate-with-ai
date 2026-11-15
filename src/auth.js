@@ -147,7 +147,7 @@ export class Auth {
         resource: API_BASE, state: pending.state, nonce: pending.nonce,
         code_challenge_method: 'S256', code_challenge: challenge });
       if (pending.clientId === 'dynamic_agent_client') {
-        query.set('agent_name_hint', 'Translate with ChatGPT');
+        query.set('agent_name_hint', 'Translate with AI');
       } else if (state.tokens?.idToken) {
         query.set('id_token_hint', state.tokens.idToken);
       }

@@ -129,7 +129,7 @@ test('first registration retains issued client after a rejected one-time code', 
   });
   const first = new URL((await auth.begin(6)).url);
   assert.equal(first.searchParams.get('client_id'), 'dynamic_agent_client');
-  assert.equal(first.searchParams.get('agent_name_hint'), 'Translate with ChatGPT');
+  assert.equal(first.searchParams.get('agent_name_hint'), 'Translate with AI');
   await assert.rejects(auth.finish(`?state=${first.searchParams.get('state')}&code=code&client_id=new-issued-client`, 6),
     { code: 'REFRESH_INVALID' });
   const next = new URL((await auth.begin(7)).url);

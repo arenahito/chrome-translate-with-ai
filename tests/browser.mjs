@@ -130,6 +130,7 @@ try {
   assert.equal(payload.stream, true);
   assert.equal(payload.reasoning.effort, 'low');
   assert.equal(payload.model, 'gpt-6.1-terra');
+  assert.equal(Object.hasOwn(payload, 'service_tier'), false);
   record('button translation completes through Worker and mocked SSE');
   await page.locator('#settings-toggle').click();
   await page.locator('#ui-language').selectOption('en');
@@ -293,8 +294,14 @@ try {
   await page.locator('#settings-toggle').click();
   await page.locator('#model').selectOption('gpt-6-pro');
   await page.locator('#effort').selectOption('high');
+  const fastMode = page.getByRole('switch', { name: 'Fast mode' });
+  assert.equal(await fastMode.isChecked(), false);
+  await fastMode.check();
   await page.locator('#settings-toggle').click();
-  await page.waitForFunction(async () => (await chrome.storage.local.get('settings')).settings.effort === 'high');
+  await page.waitForFunction(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    return settings.effort === 'high' && settings.fastMode === true;
+  });
   record('model and effort selections persist after the one-time Terra migration');
   await page.evaluate(async () => {
     const { Vault } = await import(chrome.runtime.getURL('src/vault.js'));
@@ -318,6 +325,18 @@ try {
   await restarted.locator('#source-text').press('Control+Enter');
   await restarted.waitForFunction(() => document.querySelector('#result').textContent === 'こんにちは、世界。');
   record('Ctrl+Enter translates after restart');
+  const lastResponsesPayload = async () => (await requests(restarted))
+    .filter(item => item.url.endsWith('/responses')).at(-1).payload;
+  assert.equal((await lastResponsesPayload()).service_tier, 'priority');
+  await restarted.locator('#settings-toggle').click();
+  const restoredFastMode = restarted.getByRole('switch', { name: 'Fast mode' });
+  assert.equal(await restoredFastMode.isChecked(), true);
+  await restoredFastMode.uncheck();
+  await restarted.locator('#settings-toggle').click();
+  await restarted.locator('#translate').click();
+  await restarted.waitForFunction(() => document.querySelector('#status').textContent === 'Translation complete.');
+  assert.equal(Object.hasOwn(await lastResponsesPayload(), 'service_tier'), false);
+  record('Fast mode persists across restart and controls whether priority is requested');
   assert.ok((await requests(restarted)).some(item => item.url.endsWith('/oauth/token')));
   record('expired persisted credentials refresh after browser restart');
   await restarted.evaluate(async () => {
@@ -343,6 +362,22 @@ try {
   await restarted.waitForFunction(() => document.querySelector('#recovery').hidden && !document.querySelector('#login').disabled);
   assert.equal((await rpc(restarted, 'status')).connected, false);
   record('missing vault key requires explicit recovery and never silently restores credentials');
+  const loginShortcut = restarted.locator('#open-login-settings');
+  assert.equal(await restarted.locator('#login').isVisible(), false);
+  await restarted.locator('#source-text').fill('Hello, world.');
+  await loginShortcut.press('Enter');
+  assert.equal(await restarted.locator('#settings-toggle').getAttribute('aria-expanded'), 'true');
+  assert.equal(await restarted.locator('#settings-panel #login:focus').count(), 1);
+  await restarted.locator('#provider').selectOption('lmstudio');
+  assert.equal(await restarted.locator('#login').isVisible(), false);
+  assert.equal(await loginShortcut.isVisible(), false);
+  assert.equal(await restarted.locator('#fast-mode').isVisible(), false);
+  await restarted.locator('#provider').selectOption('chatgpt');
+  await loginShortcut.waitFor({ state: 'visible' });
+  await restarted.locator('#login').press('Escape');
+  assert.equal(await restarted.locator('#settings-toggle:focus').count(), 1);
+  assert.equal(await restarted.locator('#login').isVisible(), false);
+  record('signed-out ChatGPT offers a keyboard shortcut to the login button in settings');
   await writeFile(path.join(results, 'browser-results.json'), JSON.stringify({ checks }, null, 2));
 } finally {
   if (context) await context.close();

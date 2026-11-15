@@ -1,10 +1,19 @@
 import { Vault } from './vault.js';
 import { Auth, failure } from './auth.js';
 import { TranslationAPI, JobQueue } from './api.js';
+import { LocalTranslationAPI } from './local-api.js';
+import { isLocalProvider } from './connections.js';
 
 const auth = new Auth(new Vault());
 const api = new TranslationAPI(auth);
-const queue = new JobQueue(api);
+const localApi = new LocalTranslationAPI();
+const queue = new JobQueue({
+  translate(request, signal, onDelta) {
+    return isLocalProvider(request.provider)
+      ? localApi.translate(request, signal)
+      : api.translate(request, signal, onDelta);
+  },
+});
 
 async function dispatch(type, payload) {
   switch (type) {
@@ -25,8 +34,11 @@ async function dispatch(type, payload) {
       api.catalog = null;
       return auth.logout();
     case 'models': return { models: await api.models(true) };
+    case 'localModels': return { models: await localApi.models(payload) };
     case 'translateStart':
-      if (!(await auth.status()).connected) throw failure('LOGIN_REQUIRED', 'ChatGPTに接続してください。');
+      if (!isLocalProvider(payload.request.provider) && !(await auth.status()).connected) {
+        throw failure('LOGIN_REQUIRED', 'ChatGPTに接続してください。');
+      }
       return queue.start(payload.request, payload.owner);
     case 'translateGet': return queue.get(payload.jobId, payload.owner);
     case 'translateCancel': return queue.cancel(payload.jobId, payload.owner);

@@ -1,8 +1,8 @@
 {
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; worker-src 'self'; connect-src https://auth.openai.com https://api.openai.com"
+    "extension_pages": "script-src 'self'; object-src 'none'; worker-src 'self'; connect-src https://auth.openai.com https://api.openai.com http://127.0.0.1:* http://localhost:* https://127.0.0.1:* https://localhost:*"
   },
-  "name": "Translate with ChatGPT",
+  "name": "Translate with AI",
   "default_locale": "en",
   "options_page": "index.html",
   "version": "0.1.0",
@@ -15,7 +15,7 @@
   ],
   "minimum_chrome_version": "116",
   "action": {
-    "default_title": "Translate with ChatGPT"
+    "default_title": "Translate with AI"
   },
   "background": {
     "service_worker": "src/background.js",
@@ -25,7 +25,10 @@
   "host_permissions": [
     "https://auth.openai.com/*",
     "https://api.openai.com/*",
-    "http://127.0.0.1/*"
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "https://127.0.0.1/*",
+    "https://localhost/*"
   ],
   "web_accessible_resources": [
     {

@@ -1,8 +1,16 @@
 import { languages, targetLanguages, normalizeLanguage, normalizeTargetLanguage } from './languages.js';
 import { resolveModel } from './models.js';
+import { supportsPlamoLanguage } from './plamo.js';
+import { isLocalProvider, localEndpoints, normalizeEndpoint } from './connections.js';
 import { applyTranslations, errorText, languageName, preferredLanguage, setLanguage, t } from './localization.js';
 
 const $ = (id) => document.getElementById(id);
+const provider = $('provider');
+const fastMode = $('fast-mode');
+const openLoginSettings = $('open-login-settings');
+const refreshLocal = $('refresh-local');
+const endpoint = $('endpoint');
+const resetEndpoint = $('reset-endpoint');
 const ui = Object.fromEntries(['ui-language', 'source-language', 'target-language', 'source-text', 'model', 'effort', 'theme', 'result', 'result-empty', 'status', 'translate', 'stop', 'copy', 'clear', 'swap', 'swap-control', 'outdated', 'character-count', 'detected-language', 'login', 'logout', 'account-status', 'settings-toggle', 'settings-panel', 'recovery', 'recover'].map(id => [id, $(id)]));
 const systemTheme = matchMedia('(prefers-color-scheme: dark)');
 let settings = { uiLanguage: preferredLanguage(), theme: 'system', sourceLanguage: 'auto', targetLanguage: normalizeLanguage(globalThis.chrome?.i18n?.getUILanguage() ?? navigator.language) ?? 'en', model: 'latest-terra', effort: 'low' };
@@ -20,6 +28,13 @@ let currentMessage = null;
 let detectedLanguage = null;
 let account = null;
 let accountFailed = false;
+let localError = null;
+const isLocal = () => isLocalProvider(settings.provider);
+const connection = () => ({
+  provider: settings.provider,
+  endpoint: settings.endpoints?.[settings.provider] ?? localEndpoints[settings.provider],
+});
+const modelKey = () => settings.provider === 'lmstudio' ? 'localModel' : `${settings.provider}Model`;
 
 function renderMessage() {
   if (!currentMessage) return;
@@ -44,6 +59,11 @@ function message(value, error = false, persistent = false) {
 
 function renderAccount() {
   const label = account?.accountLabel;
+  if (isLocal()) {
+    ui['account-status'].textContent = localError ? errorText(localError) : t(connected ? 'localConnected' : 'checkingConnection');
+    ui['account-status'].removeAttribute('title');
+    return;
+  }
   ui['account-status'].textContent = accountFailed ? t('connectionFailed') : connected ? (label || t('connected')) : account ? t('disconnected') : t('checkingConnection');
   ui['account-status'].title = ui['account-status'].textContent;
 }
@@ -52,15 +72,38 @@ function renderLanguage() {
   setLanguage(settings.uiLanguage);
   applyTranslations();
   ui['ui-language'].value = settings.uiLanguage;
-  ui['source-language'].replaceChildren(new Option(t('autoDetect'), 'auto'), ...languages.map(([code]) => new Option(languageName(code), code)));
-  ui['target-language'].replaceChildren(...targetLanguages.map(([code]) => new Option(languageName(code, true), code)));
+  const allowed = ([code]) => !isLocal() || supportsPlamoLanguage(code);
+  ui['source-language'].replaceChildren(new Option(t('autoDetect'), 'auto'), ...languages.filter(allowed).map(([code]) => new Option(languageName(code), code)));
+  ui['target-language'].replaceChildren(...targetLanguages.filter(allowed).map(([code]) => new Option(languageName(code, true), code)));
   ui['source-language'].value = settings.sourceLanguage;
   ui['target-language'].value = settings.targetLanguage;
+  for (const select of [ui['source-language'], ui['target-language']]) {
+    if (!select.value) {
+      const placeholder = new Option(t('selectLanguage'), '', true, true);
+      placeholder.disabled = true;
+      select.prepend(placeholder);
+    }
+  }
   ui['detected-language'].textContent = detectedLanguage ? t('detected', { language: languageName(detectedLanguage) }) : '';
   fillModelOptions();
   fillEfforts();
   renderAccount();
   renderMessage();
+}
+
+function renderProvider() {
+  provider.value = isLocal() ? settings.provider : 'chatgpt';
+  $('connection-settings').hidden = !isLocal();
+  resetEndpoint.hidden = settings.provider === 'custom';
+  refreshLocal.disabled = false;
+  endpoint.value = isLocal() ? connection().endpoint : '';
+  endpoint.removeAttribute('aria-invalid');
+  ui.effort.hidden = isLocal();
+  document.querySelector('label[for="effort"]').hidden = isLocal();
+  fastMode.closest('label').hidden = isLocal();
+  fastMode.checked = settings.fastMode === true;
+  document.querySelector('.usage-link').hidden = isLocal();
+  refreshLocal.hidden = !isLocal();
 }
 
 async function request(type, payload = {}) {
@@ -90,10 +133,12 @@ function refreshControls() {
   const length = ui['source-text'].value.length;
   ui['character-count'].textContent = `${length.toLocaleString('en-US')} / 50,000`;
   ui['character-count'].style.color = length > 50000 ? 'var(--warning)' : '';
-  ui.translate.disabled = !connected || !ui.model.value || busy || !ui['source-text'].value.trim() || length > 50000;
+  const languagesReady = ui['source-language'].value && ui['target-language'].value;
+  ui.translate.disabled = !connected || !ui.model.value || !languagesReady || busy || !ui['source-text'].value.trim() || length > 50000;
   ui.stop.hidden = !busy;
+  openLoginSettings.hidden = ui.login.hidden || !ui.recovery.hidden;
   ui.copy.disabled = !ui.result.textContent;
-  const cannotSwap = settings.sourceLanguage === 'auto';
+  const cannotSwap = !languagesReady || settings.sourceLanguage === 'auto';
   ui.swap.setAttribute('aria-disabled', String(cannotSwap));
   ui['swap-control'].dataset.unavailable = String(cannotSwap);
   if (cannotSwap) ui.swap.setAttribute('aria-describedby', 'swap-reason');
@@ -168,9 +213,10 @@ async function poll(jobId, token, original) {
 async function translate() {
   const original = ui['source-text'].value;
   if (busy) return;
-  if (!connected) return message('signInFirst');
+  if (!connected) return isLocal() ? message(localError ?? 'checkingConnection', Boolean(localError)) : message('signInFirst');
   if (!original.trim()) return message('enterText');
   if (original.length > 50000) return message('inputLimit', true);
+  if (!ui.model.value || !ui['source-language'].value || !ui['target-language'].value) return;
   const token = ++generation;
   busy = true;
   ui.outdated.hidden = true;
@@ -179,7 +225,12 @@ async function translate() {
   showOutput('');
   message('translating');
   try {
-    const job = await request('translateStart', { mode: 'text', text: original, sourceLanguage: settings.sourceLanguage, targetLanguage: settings.targetLanguage, model: settings.model, effort: settings.effort });
+    const job = await request('translateStart', {
+      ...(isLocal() ? connection() : { provider: 'chatgpt', fastMode: settings.fastMode }),
+      mode: 'text', text: original,
+      sourceLanguage: settings.sourceLanguage, targetLanguage: settings.targetLanguage,
+      model: isLocal() ? ui.model.value : settings.model, effort: settings.effort,
+    });
     if (token !== generation) {
       if (job?.jobId) request('translateCancel', { jobId: job.jobId }).catch(() => {});
       return;
@@ -205,21 +256,24 @@ function fillEfforts() {
 
 function fillModelOptions() {
   if (!models.length) {
-    ui.model.replaceChildren(new Option(t(connected ? 'loading' : 'loginToSelect'), ''));
+    ui.model.replaceChildren(new Option(t(isLocal() && localError ? 'selectModel' : connected || isLocal() ? 'loading' : 'loginToSelect'), ''));
     ui.model.disabled = true;
     return;
   }
   const list = models.filter(model => !model.slug.startsWith('latest-'));
-  const selected = resolveModel(list, settings.model);
+  const selected = isLocal()
+    ? resolveModel(list, settings[modelKey()]) ?? list.find(model => model.preferred) ?? list[0]
+    : resolveModel(list, settings.model);
   ui.model.replaceChildren(...list.map(model => new Option(model.displayName || model.slug, model.slug)));
   if (!selected) ui.model.prepend(new Option(t('selectModel'), ''));
   ui.model.value = selected?.slug || '';
   ui.model.disabled = !list.length;
 }
 
-async function loadModels() {
+async function loadModels(token) {
   try {
     const data = await request('models');
+    if (token !== statusGeneration || isLocal()) return;
     models = data?.models ?? [];
     fillModelOptions();
     fillEfforts();
@@ -229,6 +283,32 @@ async function loadModels() {
 
 async function refreshAccount() {
   const token = ++statusGeneration;
+  if (isLocal()) {
+    if (endpoint.getAttribute('aria-invalid') === 'true') return;
+    refreshLocal.disabled = true;
+    try {
+      const data = await request('localModels', connection());
+      if (token !== statusGeneration) return;
+      models = data.models;
+      localError = null;
+      connected = true;
+      if (!currentMessage?.value || currentMessage.value.code?.startsWith('LOCAL_')) message('');
+    } catch (error) {
+      if (token !== statusGeneration) return;
+      localError = error;
+      connected = false;
+      models = [];
+      message(error, true);
+    } finally {
+      if (token === statusGeneration) {
+        refreshLocal.disabled = false;
+        fillModelOptions();
+        renderAccount();
+        refreshControls();
+      }
+    }
+    return;
+  }
   try {
     const data = await request('status');
     if (token !== statusGeneration) return;
@@ -243,9 +323,9 @@ async function refreshAccount() {
     ui.recovery.hidden = !data.needsRecovery;
     if (!connected && busy) invalidate();
     if (!connected && !persistentStatus) message(data.needsRecovery ? 'resetRequired' : 'loginRequired');
-    else if (connected && !wasConnected) {
-      if (!persistentStatus) message('');
-      void loadModels();
+    else if (connected && (!wasConnected || !models.length)) {
+      if (!persistentStatus && !wasConnected) message('');
+      void loadModels(token);
     }
     refreshControls();
   } catch (error) {
@@ -277,6 +357,7 @@ async function init() {
     settings.targetLanguage = normalizeTargetLanguage(settings.targetLanguage) ?? 'en';
   } catch { message('settingsLoadFailed', true); }
   renderLanguage();
+  renderProvider();
   ui.theme.value = settings.theme;
   ui['source-language'].value = settings.sourceLanguage;
   ui['target-language'].value = settings.targetLanguage;
@@ -290,17 +371,67 @@ async function init() {
 ui['source-text'].addEventListener('input', () => invalidate());
 for (const [id, key] of [['source-language', 'sourceLanguage'], ['target-language', 'targetLanguage'], ['model', 'model'], ['effort', 'effort']]) {
   ui[id].addEventListener('change', () => {
-    persist({ [key]: ui[id].value });
+    if (!ui[id].value) return;
+    persist({ [key === 'model' && isLocal() ? modelKey() : key]: ui[id].value });
     invalidate();
     if (key === 'model') fillEfforts();
   });
 }
+provider.addEventListener('change', () => {
+  invalidate();
+  persist({ provider: provider.value });
+  connected = false;
+  account = null;
+  accountFailed = false;
+  localError = null;
+  models = [];
+  ui.login.hidden = true;
+  ui.logout.hidden = true;
+  ui.recovery.hidden = true;
+  renderProvider();
+  renderLanguage();
+  refreshControls();
+  void refreshAccount();
+});
+refreshLocal.addEventListener('click', () => { void refreshAccount(); });
+function updateEndpoint(value) {
+  invalidate();
+  connected = false;
+  models = [];
+  localError = null;
+  try {
+    const normalized = normalizeEndpoint(value);
+    persist({ endpoints: { ...settings.endpoints, [settings.provider]: normalized } });
+    endpoint.value = normalized;
+    endpoint.removeAttribute('aria-invalid');
+  } catch {
+    statusGeneration++;
+    localError = { code: 'LOCAL_ENDPOINT' };
+    endpoint.setAttribute('aria-invalid', 'true');
+    refreshLocal.disabled = true;
+    message(localError, true);
+    fillModelOptions();
+    renderAccount();
+    refreshControls();
+    return;
+  }
+  fillModelOptions();
+  renderAccount();
+  refreshControls();
+  void refreshAccount();
+}
+endpoint.addEventListener('change', () => updateEndpoint(endpoint.value));
+fastMode.addEventListener('change', () => persist({ fastMode: fastMode.checked }));
+resetEndpoint.addEventListener('click', () => updateEndpoint(localEndpoints[settings.provider]));
 ui['ui-language'].addEventListener('change', () => { persist({ uiLanguage: ui['ui-language'].value }); renderLanguage(); refreshControls(); });
 ui.theme.addEventListener('change', () => { persist({ theme: ui.theme.value }); applyTheme(); });
 ui.translate.addEventListener('click', translate);
 document.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); void translate(); }
-  if (event.key === 'Escape' && !ui['settings-panel'].hidden) { ui['settings-panel'].hidden = true; ui['settings-toggle'].setAttribute('aria-expanded', 'false'); ui['settings-toggle'].focus(); }
+  if (event.key === 'Escape' && !ui['settings-panel'].hidden) {
+    setSettingsOpen(false);
+    ui['settings-toggle'].focus();
+  }
 });
 ui.stop.addEventListener('click', () => { invalidate(); message('stopped'); });
 ui.clear.addEventListener('click', () => { ui['source-text'].value = ''; invalidate({ clear: true }); ui['source-text'].focus(); });
@@ -309,7 +440,7 @@ ui.copy.addEventListener('click', async () => {
   catch { message('copyFailed', true); }
 });
 ui.swap.addEventListener('click', () => {
-  if (settings.sourceLanguage === 'auto') return;
+  if (ui.swap.getAttribute('aria-disabled') === 'true') return;
   const source = normalizeLanguage(settings.targetLanguage);
   const target = settings.sourceLanguage;
   ui['source-language'].value = source;
@@ -337,12 +468,17 @@ ui.logout.addEventListener('click', async () => {
   catch (error) { message(error, true); }
   finally { ui.logout.disabled = false; }
 });
-ui['settings-toggle'].addEventListener('click', () => {
-  ui['settings-panel'].hidden = !ui['settings-panel'].hidden;
-  ui['settings-toggle'].setAttribute('aria-expanded', String(!ui['settings-panel'].hidden));
+function setSettingsOpen(open) {
+  ui['settings-panel'].hidden = !open;
+  ui['settings-toggle'].setAttribute('aria-expanded', String(open));
+}
+ui['settings-toggle'].addEventListener('click', () => setSettingsOpen(ui['settings-panel'].hidden));
+openLoginSettings.addEventListener('click', () => {
+  setSettingsOpen(true);
+  (ui.login.disabled ? ui['settings-toggle'] : ui.login).focus();
 });
 document.addEventListener('click', event => {
-  if (!event.target.closest('.settings-anchor')) { ui['settings-panel'].hidden = true; ui['settings-toggle'].setAttribute('aria-expanded', 'false'); }
+  if (event.target !== openLoginSettings && !event.target.closest('.settings-anchor')) setSettingsOpen(false);
 });
 ui.recover.addEventListener('click', async () => {
   if (!confirm(t('confirmReset'))) return;

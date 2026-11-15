@@ -136,8 +136,9 @@ async function ownerFor(sender) {
 async function dispatch(message, sender) {
   if (message.type === 'oauthCallback') return callback(message, sender);
   const ownPage = extensionPage(sender, 'index.html');
-  if (['status', 'login', 'logout', 'models', 'recover'].includes(message.type)) {
+  if (['status', 'login', 'logout', 'models', 'localModels', 'recover'].includes(message.type)) {
     if (!ownPage) throw fail('ACCESS_DENIED', '拡張機能の画面から操作してください。');
+    if (message.type === 'localModels') return engine('localModels', { provider: message.provider, endpoint: message.endpoint });
     if (message.type === 'login') return login();
     if (message.type === 'logout') {
       return mutatePending(async () => {

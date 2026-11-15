@@ -1,5 +1,6 @@
 import { API_BASE, failure } from './auth.js';
 import { resolveModel } from './models.js';
+import { isLocalProvider } from './connections.js';
 
 const EFFORTS = new Set(['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 function validLanguage(value) {
@@ -9,19 +10,23 @@ function validLanguage(value) {
 }
 
 export function validateTranslation(value) {
+  const provider = value?.provider ?? 'chatgpt';
   if (!value || value.mode !== 'text' ||
+    (provider !== 'chatgpt' && !isLocalProvider(provider)) ||
     !(value.sourceLanguage === 'auto' || validLanguage(value.sourceLanguage)) ||
     !validLanguage(value.targetLanguage) ||
     typeof value.model !== 'string' || value.model.length > 100 ||
-    !EFFORTS.has(value.effort)) {
+    (provider === 'chatgpt' && !EFFORTS.has(value.effort))) {
     throw failure('INVALID_REQUEST', '翻訳設定を確認してください。');
   }
-  const request = { mode: value.mode, sourceLanguage: value.sourceLanguage,
+  const request = { provider, mode: value.mode, sourceLanguage: value.sourceLanguage,
     targetLanguage: value.targetLanguage, model: value.model, effort: value.effort };
   if (typeof value.text !== 'string' || !value.text.trim() || value.text.length > 50000) {
     throw failure('INPUT_LIMIT', '原文は1〜50,000文字で指定してください。');
   }
   request.text = value.text;
+  if (isLocalProvider(provider)) request.endpoint = value.endpoint;
+  else request.fastMode = value.fastMode === true;
   return request;
 }
 
@@ -131,6 +136,7 @@ export class TranslationAPI {
         'Content-Type': 'application/json' },
       body: JSON.stringify({ model: model.slug,
         reasoning: { effort: request.effort }, instructions,
+        ...(request.fastMode ? { service_tier: 'priority' } : {}),
         input: [{ role: 'user', content: request.text }],
         store: false, stream: true }),
       signal: AbortSignal.any([signal, AbortSignal.timeout(180000)]),
