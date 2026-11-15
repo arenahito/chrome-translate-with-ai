@@ -285,6 +285,7 @@ try {
 
   await page.locator('#settings-toggle').click();
   await page.locator('#model').selectOption('gpt-6-luna');
+  assert.equal(await page.locator('#current-model').textContent(), 'GPT-6 Luna');
   await page.locator('#effort').selectOption('medium');
   await page.waitForFunction(async () => (await chrome.storage.local.get('settings')).settings.model === 'gpt-6-luna');
   await page.reload();
@@ -319,6 +320,9 @@ try {
   assert.equal((await rpc(restarted, 'status')).connected, true);
   record('browser restart restores login without a new OAuth flow');
   await restarted.waitForFunction(() => document.querySelector('#model').value === 'gpt-6-pro');
+  assert.equal(await restarted.locator('#settings-panel').isVisible(), false);
+  assert.equal(await restarted.locator('#current-model').isVisible(), true);
+  assert.equal(await restarted.locator('#current-model').textContent(), 'GPT-6 Pro');
   assert.equal(await restarted.locator('#effort').inputValue(), 'high');
   record('model and effort selections survive browser restart');
   await restarted.locator('#source-text').fill('Hello, world.');
@@ -372,7 +376,9 @@ try {
   assert.equal(await restarted.locator('#login').isVisible(), false);
   assert.equal(await loginShortcut.isVisible(), false);
   assert.equal(await restarted.locator('#fast-mode').isVisible(), false);
+  await restarted.waitForFunction(() => document.querySelector('#current-model').textContent === 'PLaMo 3 Translate 2B');
   await restarted.locator('#provider').selectOption('chatgpt');
+  assert.equal(await restarted.locator('#current-model').isVisible(), false);
   await loginShortcut.waitFor({ state: 'visible' });
   await restarted.locator('#login').press('Escape');
   assert.equal(await restarted.locator('#settings-toggle:focus').count(), 1);

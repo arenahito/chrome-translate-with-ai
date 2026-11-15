@@ -18,6 +18,10 @@ globalThis.fetch = async function (url, options = {}) {
     transaction.oncomplete = resolve;
     transaction.onerror = () => reject(transaction.error);
   });
+  if (String(url).endsWith('/api/v1/models')) return Response.json({
+    models: [{ type: 'llm', key: 'pfnet/plamo-3-translate-2b', display_name: 'PLaMo 3 Translate 2B',
+      loaded_instances: [{ id: 'plamo-3-translate-2b', config: { context_length: 32768 } }] }],
+  });
   if (String(url).endsWith('/models')) return Response.json({
     models: [
       { slug: 'gpt-6.1-terra', display_name: 'GPT-6.1 Terra', visibility: 'list', supported_reasoning_levels: ['low', 'medium', 'high'] },

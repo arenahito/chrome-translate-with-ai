@@ -6,6 +6,7 @@ import { applyTranslations, errorText, languageName, preferredLanguage, setLangu
 
 const $ = (id) => document.getElementById(id);
 const provider = $('provider');
+const currentModel = $('current-model');
 const fastMode = $('fast-mode');
 const openLoginSettings = $('open-login-settings');
 const refreshLocal = $('refresh-local');
@@ -254,10 +255,18 @@ function fillEfforts() {
   ui.effort.value = settings.effort;
 }
 
+function renderCurrentModel() {
+  const name = ui.model.value ? ui.model.selectedOptions[0].textContent : '';
+  currentModel.textContent = name;
+  currentModel.title = name;
+  currentModel.hidden = !name;
+}
+
 function fillModelOptions() {
   if (!models.length) {
     ui.model.replaceChildren(new Option(t(isLocal() && localError ? 'selectModel' : connected || isLocal() ? 'loading' : 'loginToSelect'), ''));
     ui.model.disabled = true;
+    renderCurrentModel();
     return;
   }
   const list = models.filter(model => !model.slug.startsWith('latest-'));
@@ -268,6 +277,7 @@ function fillModelOptions() {
   if (!selected) ui.model.prepend(new Option(t('selectModel'), ''));
   ui.model.value = selected?.slug || '';
   ui.model.disabled = !list.length;
+  renderCurrentModel();
 }
 
 async function loadModels(token) {
@@ -374,7 +384,10 @@ for (const [id, key] of [['source-language', 'sourceLanguage'], ['target-languag
     if (!ui[id].value) return;
     persist({ [key === 'model' && isLocal() ? modelKey() : key]: ui[id].value });
     invalidate();
-    if (key === 'model') fillEfforts();
+    if (key === 'model') {
+      renderCurrentModel();
+      fillEfforts();
+    }
   });
 }
 provider.addEventListener('change', () => {
