@@ -1,0 +1,7 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0; padding: 10vh 24px; background: light-dark(#f6f7f9, #15171c); color: light-dark(#20232b, #eceef5); }
+main { max-width: 520px; margin: auto; padding: 40px; border: 1px solid light-dark(#dfe3eb, #343945); border-radius: 20px; }
+.eyebrow { color: light-dark(#5260b3, #a8b4ff); font-size: 14px; }
+h1 { font-size: 26px; }
+#status { line-height: 1.8; margin-bottom: 28px; }
+a { color: light-dark(#4254c5, #a8b4ff); }
