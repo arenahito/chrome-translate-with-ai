@@ -4,11 +4,13 @@ A Chrome extension for translating text with your ChatGPT subscription or with P
 
 ## Installation
 
-1. Download or copy the extension files to a local folder.
+1. Download `translate-with-ai-v*.zip` from the **Assets** section of a [GitHub release](https://github.com/arenahito/chrome-translate-with-ai/releases) and extract it to a local folder.
 2. Open `chrome://extensions` in Chrome.
 3. Enable **Developer mode**.
 4. Click **Load unpacked** and select the folder containing `manifest.json`.
 5. Open the extension from the Chrome toolbar.
+
+Keep the extracted folder in place. For updates, extract the new release into the same folder and reload the extension on `chrome://extensions`.
 
 For ChatGPT translation, click the login button, sign in to ChatGPT, and authorize access to your ChatGPT plan.
 

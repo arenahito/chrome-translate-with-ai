@@ -4,6 +4,7 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 
 const root = process.cwd();
+const extensionSource = process.env.EXTENSION_SOURCE ?? root;
 const results = path.join(root, 'test-results');
 await mkdir(results, { recursive: true });
 const temporary = await mkdtemp(path.join(results, 'integration-'));
@@ -11,7 +12,7 @@ const profile = path.join(temporary, 'profile');
 const extension = path.join(temporary, 'extension');
 await mkdir(extension);
 for (const name of ['manifest.json', 'index.html', 'callback.html', 'waiting.html', 'src', '_locales', 'icons']) {
-  await cp(path.join(root, name), path.join(extension, name), { recursive: true });
+  await cp(path.join(extensionSource, name), path.join(extension, name), { recursive: true });
 }
 await cp('tests/fixtures/transport.js', path.join(extension, 'src/test-transport.js'));
 await cp('tests/fixtures/credentials.js', path.join(extension, 'src/test-credentials.js'));
