@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <title>Translate with AI</title>
+    <link rel="icon" href="icons/icon-16.png" type="image/png">
     <link rel="stylesheet" href="src/ui.css">
     <script src="src/ui.js" type="module"></script>
   </head>
   <body>
     <header class="header">
-      <a class="brand" href="index.html" aria-label="Translate with AI home" data-i18n-aria-label="home"><span class="brand-mark" aria-hidden="true">↔</span><span>Translate <span class="brand-sub">with AI</span></span></a>
+      <a class="brand" href="index.html" aria-label="Translate with AI home" data-i18n-aria-label="home">
+        <img class="brand-mark" src="icons/icon-32.png" srcset="icons/icon-48.png 1.5x, icons/icon-128.png 4x" width="32" height="32" alt="">
+        <span>Translate <span class="brand-sub">with AI</span></span>
+      </a>
       <div class="header-actions">
         <span id="current-model" class="current-model" hidden></span>
         <div class="settings-anchor">

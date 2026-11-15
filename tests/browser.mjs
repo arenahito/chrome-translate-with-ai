@@ -10,7 +10,7 @@ const temporary = await mkdtemp(path.join(results, 'integration-'));
 const profile = path.join(temporary, 'profile');
 const extension = path.join(temporary, 'extension');
 await mkdir(extension);
-for (const name of ['manifest.json', 'index.html', 'callback.html', 'waiting.html', 'src', '_locales']) {
+for (const name of ['manifest.json', 'index.html', 'callback.html', 'waiting.html', 'src', '_locales', 'icons']) {
   await cp(path.join(root, name), path.join(extension, name), { recursive: true });
 }
 await cp('tests/fixtures/transport.js', path.join(extension, 'src/test-transport.js'));
@@ -78,6 +78,15 @@ try {
   await seed(page);
   await page.goto(`${origin}/index.html`);
   await waitConnected(page);
+  await page.locator('.brand-mark').evaluate(image => image.decode());
+  const favicon = await page.locator('link[rel="icon"]').evaluate(async link => {
+    const image = new Image();
+    image.src = link.href;
+    await image.decode();
+    return [image.naturalWidth, image.naturalHeight];
+  });
+  assert.deepEqual(favicon, [16, 16]);
+  record('the packaged header icon and favicon load in Chrome');
   await page.waitForFunction(() => document.querySelector('#model').value === 'gpt-6.1-terra');
   assert.equal(await page.locator('html').getAttribute('lang'), 'en');
   assert.equal(await page.locator('#translate').textContent(), 'Translate');
