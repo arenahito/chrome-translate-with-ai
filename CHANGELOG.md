@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/arenahito/chrome-translate-with-ai/compare/v0.2.0...v0.2.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* wrap translation buttons in narrow layouts ([ef845ed](https://github.com/arenahito/chrome-translate-with-ai/commit/ef845ed912ec9bc424ac03c600f31ffbd42991e9))
+
 ## [0.2.0](https://github.com/arenahito/chrome-translate-with-ai/compare/v0.1.0...v0.2.0) (2026-11-15)
 
 
