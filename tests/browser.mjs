@@ -276,18 +276,28 @@ try {
   await page.locator('#ui-language').selectOption('en');
   await page.screenshot({ path: path.join(results, 'settings-english.png'), fullPage: true });
   await page.locator('#settings-toggle').click();
-  for (const [width, height] of [[1366, 768], [1024, 600], [420, 740], [320, 480]]) {
+  for (const [width, height, largerText = false] of [[1366, 768], [1024, 600], [420, 740], [320, 480], [320, 480, true]]) {
     await page.setViewportSize({ width, height });
-    const layout = await page.evaluate(() => {
+    const layout = await page.evaluate(largerText => {
       const stop = document.querySelector('#stop');
+      const translate = document.querySelector('#translate');
+      if (largerText) {
+        stop.style.fontSize = '16px';
+        translate.style.fontSize = '16px';
+      }
       stop.hidden = false;
-      const action = document.querySelector('#translate').getBoundingClientRect();
+      const action = translate.getBoundingClientRect();
       const swap = document.querySelector('#swap').getBoundingClientRect();
-      const stopLeft = stop.getBoundingClientRect().left;
+      const { left: stopLeft, right: stopRight } = stop.getBoundingClientRect();
+      const layout = { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight,
+        stopLeft, buttonRight: Math.max(action.right, stopRight), swapLeft: swap.left };
       stop.hidden = true;
-      return { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight, stopLeft, buttonRight: action.right, swapLeft: swap.left };
-    });
-    assert.ok(layout.width <= width && layout.height <= height && layout.stopLeft >= 0 && layout.buttonRight <= layout.swapLeft);
+      stop.style.fontSize = '';
+      translate.style.fontSize = '';
+      return layout;
+    }, largerText);
+    assert.ok(layout.width <= width && layout.height <= height && layout.stopLeft >= 0 && layout.buttonRight <= layout.swapLeft,
+      `Controls overflow at ${width}×${height} (larger text: ${largerText}): ${JSON.stringify(layout)}`);
   }
   await page.screenshot({ path: path.join(results, 'mobile-english.png'), fullPage: true });
   await page.setViewportSize({ width: 1360, height: 940 });
