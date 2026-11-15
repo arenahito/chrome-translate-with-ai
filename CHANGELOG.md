@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/arenahito/chrome-translate-with-ai/compare/v0.2.1...v0.2.2) (2026-11-15)
+
+
+### Bug Fixes
+
+* use a shared message when no local model is available ([43712ff](https://github.com/arenahito/chrome-translate-with-ai/commit/43712fffadee2a532d231a85eedf20a72f388954))
+
 ## [0.2.1](https://github.com/arenahito/chrome-translate-with-ai/compare/v0.2.0...v0.2.1) (2026-11-15)
 
 

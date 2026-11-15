@@ -5,7 +5,7 @@
   "name": "Translate with AI",
   "default_locale": "en",
   "options_page": "index.html",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2cHuwBP8ACUfxmbNnNAWaKNHqqICPZiPzIlYGFocApRyOvd9n8JUDCaV+M3BZtZfTdMAXfhkacN3iPJ5l10lYTO2MuQa82pwzzoZKNrXmxfHkcDTJBpQy/6yQb9mtGx5EYF/jUWfa2Pbu/F887SSuBmpT0E4BnBK0k8pGfZdEfjY9l+tG86iUuqcGBzOEdgex0ZU+SBw0jRyouRF9JyuwWC8nZeDvuKwSy9ZoUYrgcFxaQl6AjIMRa0pb3sd/lhbo87IxGAoh8aOWrLgfyXOayWw0zAPPvVa9GgiaH1L/vLmUn30G9aSh3m/Kn5m+fWlje1ppHDw9D47Fv/tZCbQvQIDAQAB",
   "permissions": [
     "storage",
