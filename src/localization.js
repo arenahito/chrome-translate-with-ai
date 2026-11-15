@@ -10,7 +10,7 @@ export const messages = {
   error_LOCAL_UNAVAILABLE: ['Check the local server and connection URL, then refresh the model list.', 'ローカルサーバーと接続先を確認し、モデル一覧を更新してください。'],
   error_LOCAL_AUTH: ['The local server requires authentication. Use a loopback server without API token authentication.', 'ローカルサーバーが認証を要求しました。APIトークン認証を使わないループバックサーバーに接続してください。'],
   error_LOCAL_REQUEST_FAILED: ['The local server could not complete the request. Check its server and model settings.', 'ローカルサーバーで処理を完了できませんでした。サーバーとモデルの設定を確認してください。'],
-  error_LOCAL_NO_MODEL: ['Make PLaMo 3 Translate available on the server and refresh the model list.', '接続先でPLaMo 3 Translateを利用できる状態にし、モデル一覧を更新してください。'],
+  error_LOCAL_NO_MODEL: ['Make a supported translation model available on the local server, then refresh the model list.', 'ローカルサーバーで対応する翻訳モデルを利用できる状態にし、モデル一覧を更新してください。'],
   error_LOCAL_CONTEXT: ['The text or translation exceeds the local model’s context budget. Split the text and try again.', '原文または訳文がローカルモデルの処理上限を超えました。原文を分割して再度お試しください。'],
   error_LOCAL_LANGUAGE: ['Select a language supported by PLaMo 3 Translate.', 'PLaMo 3 Translateが対応する言語を選択してください。'],
   home: ['Translate with AI home', 'Translate with AI ホーム'],
